@@ -2,66 +2,155 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Gestión de Productos</title>
+  <title>Gestión de Personas</title>
   <style>
     body {
       font-family: sans-serif;
       margin: 20px;
-      background-color: #87CEEB; /* Fondo celeste */
+      background-color: #000;
       color: white;
     }
 
-    input, button {
+    table, th, td {
+      border: 1px solid white;
+      border-collapse: collapse;
+      padding: 8px;
+    }
+
+    td {
+      color: white; /* 👈 nombres, apellidos y edad en blanco */
+    }
+
+    input {
       margin: 5px;
+      background-color: #222;
+      color: white;
+      border: 1px solid #555;
       padding: 6px;
-      border: none;
-      border-radius: 4px;
     }
 
     button {
-      background-color: #005f73;
+      margin: 2px;
+      background-color: #333;
       color: white;
+      border: 1px solid #777;
+      padding: 6px 12px;
       cursor: pointer;
     }
 
     button:hover {
-      background-color: #0a9396;
-    }
-
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      background-color: white; /* Fondo blanco para la tabla */
-      color: black; /* Texto negro en tabla */
-    }
-
-    th, td {
-      border: 1px solid black;
-      padding: 8px;
-      text-align: left;
-    }
-
-    h1, h2 {
-      color: white;
+      background-color: #555;
     }
   </style>
 </head>
 <body>
-  <h1>Gestión de Productos</h1>
+  <h1>Gestión de Personas</h1>
 
   <input id="nombre" placeholder="Nombre" />
-  <input id="descripcion" placeholder="Descripción" />
-  <input id="precio" type="number" step="0.01" placeholder="Precio" />
-  <button onclick="agregarProducto()">Agregar</button>
+  <input id="apellido" placeholder="Apellido" />
+  <input id="edad" placeholder="Edad" />
+  <button id="btnAgregar">Agregar</button>
 
   <h2>Listado</h2>
   <table>
     <thead>
-      <tr><th>Nombre</th><th>Descripción</th><th>Precio</th><th>Acciones</th></tr>
+      <tr><th>Nombre</th><th>Apellido</th><th>Edad</th><th>Acciones</th></tr>
     </thead>
-    <tbody id="tablaProductos"></tbody>
+    <tbody id="tablaPersonas"></tbody>
   </table>
 
-  <script type="module" src="./negocio.js"></script>
+  <script type="module">
+    import { obtenerPersonas, guardarPersona, eliminarPersonaPorID, actualizarPersona } from './CapadeDatos.js';
+
+    let idEditando = null;
+
+    const btnAgregar = document.getElementById("btnAgregar");
+    btnAgregar.addEventListener("click", agregarPersona);
+
+    function limpiarFormulario() {
+      document.getElementById("nombre").value = "";
+      document.getElementById("apellido").value = "";
+      document.getElementById("edad").value = "";
+      btnAgregar.textContent = "Agregar";
+      idEditando = null;
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[c]);
+    }
+
+    function agregarPersona() {
+      const nombre = document.getElementById("nombre").value.trim();
+      const apellido = document.getElementById("apellido").value.trim();
+      const edad = document.getElementById("edad").value.trim();
+
+      if (!nombre || !apellido || !edad) {
+        alert("Todos los campos son obligatorios.");
+        return;
+      }
+
+      if (!/^\d+$/.test(edad)) {
+        alert("La edad debe ser un número.");
+        return;
+      }
+
+      if (idEditando !== null) {
+        actualizarPersona({ id: idEditando, nombre, apellido, edad });
+      } else {
+        guardarPersona({ nombre, apellido, edad });
+      }
+
+      limpiarFormulario();
+      mostrarPersonas();
+    }
+
+    function eliminarPersona(id) {
+      if (confirm("¿Seguro que deseas eliminar esta persona?")) {
+        eliminarPersonaPorID(id);
+        mostrarPersonas();
+        limpiarFormulario();
+      }
+    }
+
+    function editarPersona(id) {
+      const persona = obtenerPersonas().find(p => p.id === id);
+      if (!persona) return;
+
+      document.getElementById("nombre").value = persona.nombre;
+      document.getElementById("apellido").value = persona.apellido;
+      document.getElementById("edad").value = persona.edad;
+
+      idEditando = id;
+      btnAgregar.textContent = "Actualizar";
+    }
+
+    function mostrarPersonas() {
+      const personas = obtenerPersonas();
+      const tbody = document.getElementById("tablaPersonas");
+      tbody.innerHTML = "";
+
+      for (const persona of personas) {
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+          <td>${escapeHTML(persona.nombre)}</td>
+          <td>${escapeHTML(persona.apellido)}</td>
+          <td>${escapeHTML(persona.edad)}</td>
+          <td>
+            <button onclick="editarPersonaInterno(${persona.id})">Editar</button>
+            <button onclick="eliminarPersonaInterno(${persona.id})">Eliminar</button>
+          </td>
+        `;
+        tbody.appendChild(fila);
+      }
+    }
+
+    // Exponemos funciones internas para los botones
+    window.editarPersonaInterno = editarPersona;
+    window.eliminarPersonaInterno = eliminarPersona;
+
+    mostrarPersonas();
+  </script>
 </body>
 </html>
